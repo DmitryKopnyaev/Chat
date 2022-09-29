@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Message</title>
+
+    <script type="text/javascript" src="libjs/jquery.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script type="text/javascript" src="libjs/jquery.cookie.js"></script>
+</head>
+<body>
+
+<section style="background-color: #eee;">
+    <div class="container py-5">
+
+        <div class="row">
+
+            <div class="col-md-6 col-lg-5 col-xl-4 mb-4 mb-md-0">
+                <h5 class="font-weight-bold mb-3 text-center text-lg-start">Users:</h5>
+                <div class="card">
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0" id="users">
+                            <!--                                                        <li class="p-2 border-bottom">-->
+                            <!--                                                            <a class="d-flex justify-content-between">-->
+                            <!--                                                                <div class="d-flex flex-row">-->
+                            <!--                                                                    <div class="pt-1">-->
+                            <!--                                                                        <p class="fw-bold mb-0">John Doe</p>-->
+                            <!--                                                                    </div>-->
+                            <!--                                                                </div>-->
+                            <!--                                                                <div class="pt-1">-->
+                            <!--                                                                    <p class="small text-muted mb-1">Just now</p>-->
+                            <!--                                                                </div>-->
+                            <!--                                                            </a>-->
+                            <!--                                                        </li>-->
+                            <!--                            <li class="p-2 border-bottom">-->
+                            <!--                                <a class="d-flex justify-content-between">-->
+                            <!--                                    <div class="d-flex flex-row">-->
+                            <!--                                        <div class="pt-1">-->
+                            <!--                                            <p class="fw-bold mb-0">Danny Smith</p>-->
+                            <!--                                        </div>-->
+                            <!--                                    </div>-->
+                            <!--                                    <div class="pt-1">-->
+                            <!--                                        <p class="small text-muted mb-1">5 mins ago</p>-->
+                            <!--                                    </div>-->
+                            <!--                                </a>-->
+                            <!--                            </li>-->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-7 col-xl-8">
+                <div>
+                    <textarea class="form-control" id="messages" rows="20" disabled></textarea>
+                    <br>
+                    <input class="form-control" id="input_message" type="text">
+                    <br>
+                    <button class="btn btn-success" id="button_send" type="button">Send</button>
+                </div>
+
+                <script type="text/javascript" src="scripts/msg.js"></script>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</section>
+<script>
+    if (!!window.EventSource) {
+        function isFunction(functionToCheck) {
+            return functionToCheck && {}.toString.call(functionToCheck) === '[object Function]';
+        }
+
+        function debounce(func, wait) {
+            var timeout;
+            var waitFunc;
+
+            return function () {
+                if (isFunction(wait)) {
+                    waitFunc = wait;
+                } else {
+                    waitFunc = function () {
+                        return wait
+                    };
+                }
+                var context = this, args = arguments;
+                var later = function () {
+                    timeout = null;
+                    func.apply(context, args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, waitFunc());
+            };
+        }
+
+        // reconnectFrequencySeconds doubles every retry
+        var reconnectFrequencySeconds = 1;
+        var evtSource;
+
+        var reconnectFunc = debounce(function () {
+            setupEventSource();
+            // Double every attempt to avoid overwhelming server
+            reconnectFrequencySeconds *= 2;
+            // Max out at ~1 minute as a compromise between userId experience and server load
+            if (reconnectFrequencySeconds >= 64) {
+                reconnectFrequencySeconds = 64;
+            }
+        }, function () {
+            return reconnectFrequencySeconds * 1000
+        });
+
+        function setupEventSource() {
+            evtSource = new EventSource('message'); //Создается чтобы начать получать данные
+            //Браузер установит соединение с url и будет поддерживать его открытым, ожидая события.
+            //Сервер должен ответить со статусом 200 и заголовком Content-Type: text/event-stream,
+            //затем он должен поддерживать соединение открытым и отправлять сообщения в особом формате: data :
+
+            evtSource.onopen = function () {
+                // Reset reconnect frequency upon successful connection
+                reconnectFrequencySeconds = 1;
+            };
+            evtSource.onerror = function () {
+                evtSource.close();
+                reconnectFunc();
+            };
+        }
+
+        setupEventSource();
+    } else {
+        alert("Your browser does not support EventSource!");
+    }
+</script>
+
+</body>
+</html>
